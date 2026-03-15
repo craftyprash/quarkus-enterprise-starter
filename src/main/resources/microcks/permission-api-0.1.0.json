@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Permission API",
+    "version": "0.1.0",
+    "description": "External permission service mock for Microcks"
+  },
+  "paths": {
+    "/permissions": {
+      "get": {
+        "operationId": "loadPermissions",
+        "summary": "Load permissions for the authenticated user",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permissions loaded",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "admin-user": {
+                    "summary": "Admin user with full access",
+                    "value": {
+                      "permissions": {
+                        "applicant": ["create", "read", "update", "delete"],
+                        "drawdown": ["create", "read", "update", "disburse"],
+                        "payment": ["read"]
+                      },
+                      "scopes": {
+                        "region": ["NORTH", "SOUTH", "EAST", "WEST"],
+                        "branch": ["MUMBAI", "DELHI", "BANGALORE"]
+                      }
+                    }
+                  },
+                  "readonly-user": {
+                    "summary": "Read-only user",
+                    "value": {
+                      "permissions": {
+                        "applicant": ["read"],
+                        "drawdown": ["read"],
+                        "payment": ["read"]
+                      },
+                      "scopes": {
+                        "region": ["NORTH"],
+                        "branch": ["DELHI"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

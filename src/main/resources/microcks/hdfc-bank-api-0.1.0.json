@@ -1,0 +1,77 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "HDFC Bank API",
+    "version": "0.1.0",
+    "description": "HDFC bank integration mock for Microcks"
+  },
+  "paths": {
+    "/api/v1/disburse": {
+      "post": {
+        "operationId": "disburse",
+        "summary": "Initiate NEFT disbursement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "paymentId": { "type": "integer" },
+                  "amount": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disbursement initiated",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "success": {
+                    "value": {
+                      "bankReference": "HDFC-MOCK-00001",
+                      "status": "PENDING"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "operationId": "checkStatus",
+        "summary": "Check NEFT transfer status",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status response",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "settled": {
+                    "value": {
+                      "bankReference": "HDFC-MOCK-00001",
+                      "status": "SETTLED"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
