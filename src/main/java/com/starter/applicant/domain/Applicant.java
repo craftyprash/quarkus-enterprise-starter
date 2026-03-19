@@ -4,10 +4,8 @@ import com.starter.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import java.util.Objects;
-import org.hibernate.envers.Audited;
 
 @Entity
-@Audited
 public class Applicant extends BaseEntity {
 
     @Column(nullable = false)
