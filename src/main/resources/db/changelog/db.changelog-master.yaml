@@ -1,7 +1,0 @@
-databaseChangeLog:
-  - include:
-      file: db/changelog/001-create-applicant.sql
-  - include:
-      file: db/changelog/002-create-drawdown.sql
-  - include:
-      file: db/changelog/003-create-payment.sql
