@@ -51,8 +51,10 @@ This runs in order:
 
 ## Database Setup
 
-```sql
-CREATE DATABASE starter;
+Start a local Postgres (creates the `starter` database automatically):
+
+```bash
+docker compose up -d
 ```
 
 The `.env` file at the project root holds database credentials (gitignored):
@@ -64,7 +66,9 @@ QUARKUS_DATASOURCE_PASSWORD=postgres
 
 The JDBC URL is in `application-dev.properties` (committed), not in `.env`.
 
-Schema is managed by Hibernate (`quarkus.hibernate-orm.database.generation`). Set to `none` in production, `drop-and-create` in tests.
+**Schema is managed by Flyway** — versioned SQL migrations in `src/main/resources/db/migration/`.
+They apply on startup in dev/staging/production (`quarkus.flyway.migrate-at-start=true`); Hibernate
+never creates tables (`database.generation=none`). Tests use H2 + Hibernate `drop-and-create`.
 
 ---
 

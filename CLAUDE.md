@@ -219,7 +219,7 @@ public class Applicant extends BaseEntity {
 
 **SQL safety — hard rule:** every query is parameterized (`?1`, named params, Panache params). **String concatenation / `String.format` / interpolation into any SQL, JPQL, or `LIKE` clause is forbidden.** No dynamic `ORDER BY` or table names from user input — map user input to a fixed allow-list of columns.
 
-> Schema: `quarkus.hibernate-orm.database.generation=none` — Hibernate does **not** create tables, and there is **no migration tool wired in yet**. If your change needs a table, stop and confirm how schema is applied; if you introduce migrations, use **Liquibase** (SQL changesets) and say so in the handoff. Always `TIMESTAMPTZ` for time, `NUMERIC(15,2)` for money, FK constraints and `NOT NULL` where the domain requires them.
+> Schema: **Flyway owns it** (`quarkus.hibernate-orm.database.generation=none` — Hibernate never creates or alters tables). If your change needs schema, add a new versioned SQL migration under `src/main/resources/db/migration/` (`V2__add_x.sql`, `V3__…`). **Never edit a migration that has shipped — add the next one.** Migrations apply on startup in dev/staging/production (`quarkus.flyway.migrate-at-start=true`); tests use H2 + Hibernate `drop-and-create` with Flyway off. Always `TIMESTAMPTZ` for time, `NUMERIC(15,2)` for money, snake_case columns, FK constraints and `NOT NULL` where the domain requires them.
 
 ---
 
