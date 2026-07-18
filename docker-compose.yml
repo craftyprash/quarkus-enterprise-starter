@@ -1,0 +1,16 @@
+# Local development only — starts PostgreSQL for the starter.
+# Usage: docker compose up -d   (then `mvn quarkus:dev`)
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: starter
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

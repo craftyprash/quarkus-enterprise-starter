@@ -1,0 +1,36 @@
+name: CI
+
+# Quality gate. This is the enforcement point:
+#   - Spotless (bound to `validate`) fails the build on unformatted code
+#   - ArchUnit tests fail the build on architecture violations
+#   - Unit/integration tests run against H2
+#   - `verify` also runs the Quarkus build so the app is proven to assemble
+# Make this a required check on `main` and `develop` via branch protection.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build, format check, arch tests & unit tests
+        run: mvn -B -U clean verify

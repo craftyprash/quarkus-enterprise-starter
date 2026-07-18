@@ -4,12 +4,12 @@ import com.starter.applicant.ApplicantApi;
 import com.starter.applicant.api.request.CreateApplicantReq;
 import com.starter.applicant.api.response.ApplicantRes;
 import com.starter.applicant.domain.Applicant;
+import com.starter.common.api.PageRes;
 import com.starter.common.exception.DuplicateException;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.util.List;
 import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,9 @@ public class ApplicantService implements ApplicantApi {
     }
 
     @Override
-    public List<Summary> listActive() {
-        return queryRepo.findActiveSummaries();
+    public PageRes<Summary> listActive(int page, int size, String sort, String order) {
+        var content = queryRepo.findActive(page, size, sort, order);
+        var total = queryRepo.countActive();
+        return PageRes.of(content, page, size, total);
     }
 }

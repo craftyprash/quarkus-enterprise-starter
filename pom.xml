@@ -10,7 +10,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <java.version>25</java.version>
+    <java.version>21</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <maven.compiler.release>${java.version}</maven.compiler.release>
@@ -79,13 +79,7 @@
       <artifactId>quarkus-smallrye-openapi</artifactId>
     </dependency>
 
-    <!-- Security -->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-smallrye-jwt</artifactId>
-    </dependency>
-
-    <!-- REST Client -->
+    <!-- REST Client (for outbound integrations — see CLAUDE.md §12) -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-rest-client-jackson</artifactId>
@@ -182,9 +176,6 @@
         <version>${compiler.version}</version>
         <configuration>
           <release>${java.version}</release>
-          <compilerArgs>
-            <arg>--enable-preview</arg>
-          </compilerArgs>
         </configuration>
       </plugin>
 
@@ -214,7 +205,7 @@
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
           </systemPropertyVariables>
-          <argLine>--enable-preview -Dnet.bytebuddy.experimental=true -Duser.timezone=UTC --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+          <argLine>-Duser.timezone=UTC</argLine>
         </configuration>
       </plugin>
     </plugins>

@@ -1,0 +1,31 @@
+registry:
+  username: AWS
+  password: <%= %x(aws ecr get-login-password --region ap-south-1).strip %>
+
+servers:
+  web:
+    - production-server
+
+proxy:
+  ssl: false
+  hosts:
+    - api.example.com
+  path_prefix: /starter
+  app_port: 8080
+  response_timeout: 120
+  healthcheck:
+    path: /q/health/live
+    interval: 5
+    timeout: 5
+
+env:
+  clear:
+    QUARKUS_PROFILE: production
+    QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://production-db:5432/starter
+
+builder:
+  arch: amd64
+
+labels:
+  app: quarkus-starter
+  env: production

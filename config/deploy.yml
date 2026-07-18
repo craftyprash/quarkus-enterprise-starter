@@ -1,0 +1,20 @@
+# Kamal base config — shared across destinations.
+# Per-environment overrides live in config/deploy.<destination>.yml (staging, production).
+# Deploy with:  kamal deploy -d staging   |   kamal deploy -d production
+service: <%= ENV.fetch("KAMAL_SERVICE", "quarkus-starter") %>
+image: quarkus-starter
+
+# Container registry. Example uses AWS ECR — replace <ACCOUNT>/<REGION> with yours.
+registry:
+  server: <ACCOUNT>.dkr.ecr.ap-south-1.amazonaws.com
+
+# SSH user Kamal uses to reach the target servers.
+ssh:
+  user: operations
+
+# Secrets are injected from .kamal/secrets.<destination> at deploy time.
+# Never commit real values — see .kamal/secrets.example. .kamal/secrets* is gitignored.
+env:
+  secret:
+    - QUARKUS_DATASOURCE_USERNAME
+    - QUARKUS_DATASOURCE_PASSWORD

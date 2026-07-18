@@ -1,0 +1,68 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_type:
+        description: "Deploy from main or a semantic tag (v1.2.3)"
+        required: true
+        type: choice
+        options:
+          - main
+          - tag
+      ref:
+        description: "main OR a semantic tag (v1.2.3)"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    # Self-hosted runner that can build the image and SSH to the production host via Kamal.
+    runs-on: [kamal, prod]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production ref
+        run: |
+          set -e
+          if [ "${{ inputs.deployment_type }}" = "main" ] && [ "${{ inputs.ref }}" != "main" ]; then
+            echo "❌ Production branch deploy must be exactly 'main'"; exit 1
+          fi
+          if [ "${{ inputs.deployment_type }}" = "tag" ]; then
+            if ! [[ "${{ inputs.ref }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Production tags must be strict semver (v1.2.3)"; exit 1
+            fi
+            git fetch --tags
+            git tag -l | grep -q "^${{ inputs.ref }}$" || { echo "❌ Tag does not exist"; exit 1; }
+          fi
+
+      - name: Checkout requested ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Compute version
+        run: |
+          if [ "${{ inputs.deployment_type }}" = "main" ]; then
+            echo "VERSION=main-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          else
+            REF="${{ inputs.ref }}"; echo "VERSION=${REF#v}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Prepare Kamal secrets
+        run: |
+          mkdir -p .kamal
+          cat <<EOF > .kamal/secrets.production
+          QUARKUS_DATASOURCE_USERNAME=${{ secrets.PROD_DB_USERNAME }}
+          QUARKUS_DATASOURCE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+          EOF
+
+      - name: Deploy via Kamal
+        run: |
+          kamal lock release -d production || true
+          kamal deploy -d production
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f .kamal/secrets.*

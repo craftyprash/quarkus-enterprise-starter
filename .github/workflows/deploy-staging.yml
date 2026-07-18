@@ -1,0 +1,39 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to deploy"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    # Self-hosted runner that can build the image and SSH to the staging host via Kamal.
+    runs-on: [test, kamal]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Compute version
+        run: echo "VERSION=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Prepare Kamal secrets
+        run: |
+          mkdir -p .kamal
+          cat <<EOF > .kamal/secrets.staging
+          QUARKUS_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
+          QUARKUS_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
+          EOF
+
+      - name: Deploy via Kamal
+        run: |
+          kamal lock release -d staging || true
+          kamal deploy -d staging
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f .kamal/secrets.*

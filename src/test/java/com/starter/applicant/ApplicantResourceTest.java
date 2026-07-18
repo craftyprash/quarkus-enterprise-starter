@@ -2,6 +2,7 @@ package com.starter.applicant;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -21,7 +22,7 @@ class ApplicantResourceTest {
                 given().contentType("application/json")
                         .body(body)
                         .when()
-                        .post("/applicants")
+                        .post("/api/v1/applicants")
                         .then()
                         .statusCode(201)
                         .body("name", equalTo("Jane Doe"))
@@ -31,7 +32,7 @@ class ApplicantResourceTest {
                         .getLong("id");
 
         given().when()
-                .get("/applicants/" + id)
+                .get("/api/v1/applicants/" + id)
                 .then()
                 .statusCode(200)
                 .body("email", equalTo("jane@example.com"));
@@ -46,14 +47,36 @@ class ApplicantResourceTest {
 
         given().contentType("application/json")
                 .body(body)
-                .post("/applicants")
+                .post("/api/v1/applicants")
                 .then()
                 .statusCode(201);
 
         given().contentType("application/json")
                 .body(body)
-                .post("/applicants")
+                .post("/api/v1/applicants")
                 .then()
                 .statusCode(409);
+    }
+
+    @Test
+    void listReturnsPaginatedShapeWithoutEnvelope() {
+        given().contentType("application/json")
+                .body(
+                        """
+                        {"name": "List User", "email": "list@example.com"}
+                        """)
+                .post("/api/v1/applicants")
+                .then()
+                .statusCode(201);
+
+        given().when()
+                .get("/api/v1/applicants?page=0&size=5&sort=name&order=asc")
+                .then()
+                .statusCode(200)
+                .body("content", notNullValue())
+                .body("page", equalTo(0))
+                .body("size", equalTo(5))
+                .body("$", hasKey("totalElements"))
+                .body("$", hasKey("totalPages"));
     }
 }

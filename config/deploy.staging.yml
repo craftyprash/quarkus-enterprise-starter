@@ -1,0 +1,33 @@
+registry:
+  username: AWS
+  password: <%= %x(aws ecr get-login-password --region ap-south-1).strip %>
+
+servers:
+  web:
+    - staging-server
+
+# kamal-proxy fronts the app. The API gateway (APISix) sits in front of the proxy
+# and owns authentication/authorization — the app does none itself.
+proxy:
+  ssl: false
+  hosts:
+    - api.staging.example.com
+  path_prefix: <%= ENV.fetch("KAMAL_PATH_PREFIX", "/starter") %>
+  app_port: 8080
+  response_timeout: 60
+  healthcheck:
+    path: /q/health/live
+    interval: 5
+    timeout: 5
+
+env:
+  clear:
+    QUARKUS_PROFILE: staging
+    QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://staging-db:5432/starter
+
+builder:
+  arch: amd64
+
+labels:
+  app: quarkus-starter
+  env: staging

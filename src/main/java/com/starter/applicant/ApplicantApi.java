@@ -1,7 +1,7 @@
 package com.starter.applicant;
 
+import com.starter.common.api.PageRes;
 import java.time.Instant;
-import java.util.List;
 
 /** Applicant module contract. Other modules inject this interface. */
 public interface ApplicantApi {
@@ -12,5 +12,5 @@ public interface ApplicantApi {
 
     Info findById(Long id);
 
-    List<Summary> listActive();
+    PageRes<Summary> listActive(int page, int size, String sort, String order);
 }
