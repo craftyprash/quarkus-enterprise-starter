@@ -5,11 +5,14 @@ accepted. The rules themselves live in [CLAUDE.md](CLAUDE.md); this is the "why"
 
 ---
 
-### Java 21, no preview features
-Retargeted from an earlier Java 25 + `--enable-preview` setup. **Why:** 21 is the current LTS the team
-standardises on; preview features can't run in production without flags and shift between releases.
-**Trade-off:** none meaningful — the Java 25-era build workarounds (Byte Buddy experimental,
-`--add-opens`) were removed and the build is simpler.
+### Java 25 (LTS) on Quarkus 3.33 LTS, no workarounds
+The original ran Java 25 with hacks (`--enable-preview`, Byte Buddy experimental, `--add-opens`)
+because the Quarkus of the day (3.23) didn't support Java 25 cleanly. We briefly retargeted to Java 21
+to shed those hacks, then upgraded to **Quarkus 3.33 LTS**, which has **full, native Java 25 support**.
+**Why:** Java 25 is the current Java LTS and 3.33 the current Quarkus LTS — an LTS-on-LTS baseline that
+picks up the language/perf/security gains with none of the workarounds. **Trade-off:** none meaningful;
+the build is clean (no preview flags, no `--add-opens`, standard Byte Buddy). Java 21 is still supported
+by 3.33 if a target environment requires it — this is a one-line `pom` change plus `mise.toml`.
 
 ### Authentication/authorization at the gateway, none in-app
 The in-app JWT + permission machinery was removed; the service sits behind **APISix**, which does

@@ -1,6 +1,6 @@
 # Quarkus Enterprise Starter
 
-A standards-based, secure starter for our Quarkus + Java 21 + PostgreSQL services. Clone it, build
+A standards-based, secure starter for our Quarkus + Java 25 + PostgreSQL services. Clone it, build
 your capability on the reference modules, and ship it behind the API gateway.
 
 - **The rules** (architecture, REST, exceptions, outbox, money/PII) — [CLAUDE.md](CLAUDE.md). Written
@@ -25,10 +25,10 @@ your capability on the reference modules, and ship it behind the API gateway.
 
 ## Local setup
 
-**1. Java 21 (via [mise](https://mise.jdx.dev/)):** `mise.toml` pins the version.
+**1. Java 25 (via [mise](https://mise.jdx.dev/)):** `mise.toml` pins the version.
 ```bash
 mise install
-java -version                  # should show 21.x
+java -version                  # should show 25.x
 # if it shows an older JDK, activate mise in your shell:
 eval "$(mise activate bash)"   # or zsh
 ```

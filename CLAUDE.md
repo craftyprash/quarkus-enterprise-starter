@@ -30,7 +30,7 @@ This is a **starter template**. Mirror the reference modules — **`applicant`**
 
 | | |
 |---|---|
-| Language | **Java 21 (LTS)** — no preview features, no `--enable-preview` |
+| Language | **Java 25 (LTS)** on **Quarkus 3.33 LTS** — no preview features, no `--enable-preview`, no build workarounds |
 | Framework | **Quarkus** (REST + Jackson, Hibernate ORM + Panache, Hibernate Validator) |
 | DB | **PostgreSQL** (H2 for tests) |
 | Build | **Maven** + Spotless (Google Java Format, AOSP) + ArchUnit |
@@ -238,7 +238,7 @@ No column-level audit trail (Hibernate Envers / `@Audited`) is wired in — don'
 - Never compare amounts with `==`/`equals()`; use `compareTo`.
 - Always specify scale and `RoundingMode` explicitly on any division or rounding. Never rely on defaults.
 - Time is **`Instant`** — never `LocalDateTime`. DB `TIMESTAMPTZ`. JVM runs UTC.
-- Prefer `record`, `var`, switch expressions, pattern matching, `Optional` (return type only), text blocks, `sealed` — standard Java 21, no preview features.
+- Prefer `record`, `var`, switch expressions, pattern matching, `Optional` (return type only), text blocks, `sealed` — standard Java 25, no preview features.
 
 ---
 
