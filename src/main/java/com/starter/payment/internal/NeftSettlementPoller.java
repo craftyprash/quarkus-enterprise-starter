@@ -1,6 +1,6 @@
 package com.starter.payment.internal;
 
-import com.starter.common.integration.BankGateway;
+import com.starter.common.integration.BankRouter;
 import com.starter.common.integration.LmsGateway;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -19,7 +19,7 @@ public class NeftSettlementPoller {
     private static final Logger log = LoggerFactory.getLogger(NeftSettlementPoller.class);
 
     @Inject PaymentService paymentService;
-    @Inject BankGateway bankGateway;
+    @Inject BankRouter bankRouter;
     @Inject LmsGateway lmsGateway;
 
     @Scheduled(every = "30s", identity = "neft-settlement-poller")
@@ -31,7 +31,10 @@ public class NeftSettlementPoller {
 
     void pollOne(PaymentService.PollTask task) {
         try {
-            var status = bankGateway.checkStatus(task.bankReference()); // remote — no tx
+            var status =
+                    bankRouter
+                            .resolveByBank(task.bank())
+                            .checkStatus(task.bankReference()); // remote
             switch (status) {
                 case "SETTLED" -> {
                     lmsGateway.recordDisbursement(

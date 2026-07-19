@@ -30,13 +30,15 @@ class PaymentOutboxFlowTest {
                 .getLong("id");
     }
 
-    private long createAndDisburse(long applicantId, String amount) {
+    private long createAndDisburse(long applicantId, String anchor, String amount) {
         var id =
                 given().contentType("application/json")
                         .body(
                                 "{\"applicantId\":"
                                         + applicantId
-                                        + ",\"anchorCode\":\"TATA\",\"amount\":"
+                                        + ",\"anchorCode\":\""
+                                        + anchor
+                                        + "\",\"amount\":"
                                         + amount
                                         + "}")
                         .post("/api/v1/drawdowns")
@@ -62,7 +64,7 @@ class PaymentOutboxFlowTest {
     @Test
     void impsDisbursesImmediately() {
         var applicantId = createApplicant("pay-imps@example.com");
-        var drawdownId = createAndDisburse(applicantId, "50000.00"); // <= IMPS limit
+        var drawdownId = createAndDisburse(applicantId, "TATA", "50000.00"); // TATA -> IDFC -> IMPS
 
         assertEquals("INITIATED", paymentStatus(drawdownId));
 
@@ -79,7 +81,8 @@ class PaymentOutboxFlowTest {
     @Test
     void neftPollsThenSettles() {
         var applicantId = createApplicant("pay-neft@example.com");
-        var drawdownId = createAndDisburse(applicantId, "500000.00"); // > IMPS limit
+        var drawdownId =
+                createAndDisburse(applicantId, "INFOSYS", "500000.00"); // INFOSYS -> HDFC -> NEFT
 
         disbursementProcessor.processPending();
         assertEquals("POLLING", paymentStatus(drawdownId));
@@ -91,7 +94,7 @@ class PaymentOutboxFlowTest {
     @Test
     void disbursementIsIdempotentUnderRetry() {
         var applicantId = createApplicant("pay-idem@example.com");
-        var drawdownId = createAndDisburse(applicantId, "1000.00");
+        var drawdownId = createAndDisburse(applicantId, "TATA", "1000.00");
 
         // Processing twice must apply exactly once.
         disbursementProcessor.processPending();

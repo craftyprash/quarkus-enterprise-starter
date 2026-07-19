@@ -1,34 +1,25 @@
 package com.starter.common.integration;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import java.math.BigDecimal;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Gateway wrapper for the disbursing bank. This is an in-process MOCK for the starter.
+ * A disbursing bank. One implementation per bank; {@link BankRouter} picks the right one. Called
+ * only from the outbox processors, outside any transaction (CLAUDE.md §8).
  *
- * <p>A real implementation injects a {@code @RegisterRestClient} bank client (see CLAUDE.md §12),
- * configures a timeout, and never trusts the upstream response blindly. It is called only from the
- * outbox processors — never inside a {@code @Transactional} method.
+ * <p>Implementations in this template are in-process mocks; a real one injects a
+ * {@code @RegisterRestClient} client (with a timeout) and calls it here.
  */
-@ApplicationScoped
-public class BankGateway {
+public interface BankGateway {
 
-    private static final Logger log = LoggerFactory.getLogger(BankGateway.class);
+    /** Stable code identifying this bank (e.g. "HDFC"). */
+    String bankCode();
 
-    /**
-     * Disburse to the bank and return its reference. The reference is derived from the payment id
-     * so a retried disbursement returns the same reference — i.e. the call is idempotent.
-     */
-    public String disburse(Long paymentId, BigDecimal amount) {
-        var bankReference = "BANKREF-" + paymentId;
-        log.info("Bank disburse payment={} ref={}", paymentId, bankReference);
-        return bankReference;
-    }
+    /** Transfer rail this bank uses for the given anchor (e.g. "IMPS" / "NEFT"). */
+    String transferMode(String anchorCode);
 
-    /** Check settlement status for a NEFT transfer. Mock always settles. */
-    public String checkStatus(String bankReference) {
-        return "SETTLED";
-    }
+    /** Disburse and return the bank reference. Must be idempotent on the payment id. */
+    String disburse(Long paymentId, BigDecimal amount);
+
+    /** Settlement status for a reference: "SETTLED" | "FAILED" | anything else = still pending. */
+    String checkStatus(String bankReference);
 }

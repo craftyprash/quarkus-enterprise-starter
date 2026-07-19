@@ -92,6 +92,14 @@ Annotations on `Req` + `@Valid` cover ~all field-shape cases (cross-field via cl
 injected `Validator` — it yields the same 400 `errors[]` shape. **Why:** annotations aren't a 100%
 rule; the programmatic escape hatch reuses the same machinery instead of hand-building errors.
 
+### Bank integration: strategy + router, not a single gateway
+`BankGateway` is an interface with one impl per bank; `BankRouter` discovers all impls via CDI
+(`Instance<BankGateway>`) and picks by anchor→bank mapping. **Why:** a lender disburses through
+several banks with different rails (IMPS/NEFT) — adding a bank should be a new bean, not an edit to a
+switch. **Trade-off:** more classes than a single mock; the impls here are in-process stubs where a
+real `@RegisterRestClient` client would plug in. Unknown anchor → `BusinessValidationException` (422);
+a missing gateway for a persisted bank code → `IllegalStateException` (a bug, 500).
+
 ### Persistence: Panache + a fluent `QueryRepo`, no JOOQ
 CRUD via Panache; native SQL projections via a `QueryRepo` (fluent, `Tuple`-based, named + positional
 params). **Why:** kept the richer fluent wrapper over the original's two-method one; JOOQ adds codegen

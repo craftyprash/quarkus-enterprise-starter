@@ -326,7 +326,7 @@ Deployment is **Kamal** — Docker image built from the root `Dockerfile`, confi
 
 ## 12. External integrations
 
-The `quarkus-rest-client-jackson` extension is included for outbound calls. `common/integration` holds the reference gateways (`BankGateway`, `LmsGateway` — in-process mocks in this template). For a new integration:
+The `quarkus-rest-client-jackson` extension is included for outbound calls. `common/integration` holds the reference gateways — `BankGateway` (interface, one impl per bank: `HdfcBankGateway`/`IdfcBankGateway`), `BankRouter` (picks the gateway by anchor/bank, discovers impls via CDI), and `LmsGateway`; all in-process mocks in this template. For a new integration:
 
 1. Define a `{X}Client` — `@RegisterRestClient(configKey = "...")` interface in `common/`, HTTP contract only, URL from config per profile.
 2. Wrap it in a `{X}Gateway` (`@ApplicationScoped`) in `common/integration/`; modules inject the **gateway**, never the raw client.

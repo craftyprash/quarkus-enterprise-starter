@@ -1,6 +1,6 @@
 package com.starter.payment.internal;
 
-import com.starter.common.integration.BankGateway;
+import com.starter.common.integration.BankRouter;
 import com.starter.common.integration.LmsGateway;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,7 +20,7 @@ public class DisbursementProcessor {
     private static final Logger log = LoggerFactory.getLogger(DisbursementProcessor.class);
 
     @Inject PaymentService paymentService;
-    @Inject BankGateway bankGateway;
+    @Inject BankRouter bankRouter;
     @Inject LmsGateway lmsGateway;
 
     @Scheduled(every = "5s", identity = "disbursement-processor")
@@ -36,7 +36,10 @@ public class DisbursementProcessor {
             return;
         }
         try {
-            var bankRef = bankGateway.disburse(task.paymentId(), task.amount()); // remote — no tx
+            var bankRef =
+                    bankRouter
+                            .resolveByBank(task.bank())
+                            .disburse(task.paymentId(), task.amount()); // remote — no tx
             if ("IMPS".equals(task.transferMode())) {
                 lmsGateway.recordDisbursement(task.drawdownId(), task.amount(), bankRef); // remote
                 paymentService.completeImmediate(

@@ -48,6 +48,26 @@ class DrawdownResourceTest {
     }
 
     @Test
+    void disburseWithUnknownAnchorReturns422() {
+        var applicantId = createApplicant("dd-anchor@example.com");
+        var id =
+                given().contentType("application/json")
+                        .body(
+                                "{\"applicantId\":"
+                                        + applicantId
+                                        + ",\"anchorCode\":\"ACME\",\"amount\":1000.00}")
+                        .post("/api/v1/drawdowns")
+                        .then()
+                        .statusCode(201)
+                        .extract()
+                        .jsonPath()
+                        .getLong("id");
+
+        // ACME isn't in the BankRouter anchor map -> BusinessValidationException -> 422.
+        given().post("/api/v1/drawdowns/" + id + "/disbursement").then().statusCode(422);
+    }
+
+    @Test
     void createWithMissingApplicantReturns404() {
         given().contentType("application/json")
                 .body("{\"applicantId\":999999,\"anchorCode\":\"TATA\",\"amount\":1000.00}")

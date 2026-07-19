@@ -1,6 +1,7 @@
 package com.starter.payment.internal;
 
 import com.starter.common.exception.NotFoundException;
+import com.starter.common.integration.BankRouter;
 import com.starter.payment.PaymentApi;
 import com.starter.payment.domain.OutboxEvent;
 import com.starter.payment.domain.Payment;
@@ -23,23 +24,25 @@ public class PaymentService implements PaymentApi {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
-    // Illustrative routing only — replace with the real transfer-mode policy. Not a business rule.
-    private static final BigDecimal IMPS_LIMIT = new BigDecimal("200000.00");
-    private static final String BANK = "MOCKBANK";
-
     @Inject PaymentRepo paymentRepo;
     @Inject OutboxRepo outboxRepo;
+    @Inject BankRouter bankRouter;
 
     /** Snapshot handed to the processor so the remote call runs with no open transaction. */
     public record DisburseTask(
             Long eventId,
             Long paymentId,
             Long drawdownId,
+            String bank,
             String transferMode,
             BigDecimal amount) {}
 
     public record PollTask(
-            Long paymentId, Long drawdownId, BigDecimal amount, String bankReference) {}
+            Long paymentId,
+            Long drawdownId,
+            String bank,
+            BigDecimal amount,
+            String bankReference) {}
 
     // ── Public contract ────────────────────────────────────────────────
 
@@ -52,8 +55,14 @@ public class PaymentService implements PaymentApi {
             return toInfo(existing.get());
         }
 
-        var transferMode = input.amount().compareTo(IMPS_LIMIT) <= 0 ? "IMPS" : "NEFT";
-        var payment = new Payment(input.drawdownId(), BANK, transferMode, input.amount());
+        // Route by anchor to a bank + transfer rail (BankRouter discovers gateways via CDI).
+        var gateway = bankRouter.resolveByAnchor(input.anchorCode());
+        var payment =
+                new Payment(
+                        input.drawdownId(),
+                        gateway.bankCode(),
+                        gateway.transferMode(input.anchorCode()),
+                        input.amount());
         paymentRepo.persist(payment);
 
         var payload =
@@ -61,9 +70,10 @@ public class PaymentService implements PaymentApi {
         outboxRepo.persist(new OutboxEvent("PAYMENT", payment.id, "DISBURSE_REQUESTED", payload));
 
         log.info(
-                "Payment initiated id={} mode={} drawdown={}",
+                "Payment initiated id={} bank={} mode={} drawdown={}",
                 payment.id,
-                transferMode,
+                payment.bank,
+                payment.transferMode,
                 payment.drawdownId);
         return toInfo(payment);
     }
@@ -106,6 +116,7 @@ public class PaymentService implements PaymentApi {
                         event.id,
                         payment.id,
                         payment.drawdownId,
+                        payment.bank,
                         payment.transferMode,
                         payment.amount));
     }
@@ -138,7 +149,7 @@ public class PaymentService implements PaymentApi {
     @Transactional
     public List<PollTask> pollingTasks() {
         return paymentRepo.findByStatus("POLLING").stream()
-                .map(p -> new PollTask(p.id, p.drawdownId, p.amount, p.bankReference))
+                .map(p -> new PollTask(p.id, p.drawdownId, p.bank, p.amount, p.bankReference))
                 .toList();
     }
 
