@@ -92,6 +92,14 @@ Annotations on `Req` + `@Valid` cover ~all field-shape cases (cross-field via cl
 injected `Validator` — it yields the same 400 `errors[]` shape. **Why:** annotations aren't a 100%
 rule; the programmatic escape hatch reuses the same machinery instead of hand-building errors.
 
+### Record-level scoping off the gateway identity (not in-app auth)
+`GatewayIdentityFilter` reads a gateway-forwarded `X-Anchor-Scope` header into a request-scoped
+`CallerContext`; `DrawdownService.findById` enforces that the drawdown's anchor is in that scope, else
+403. **Why:** authn/authz is APISix's job, but the app must still stop a caller from reading a record
+outside their scope — using the *validated gateway identity*, never an id from the request (the common
+IDOR). **Trade-off:** this is not full authorization (no roles/permissions in-app, by design); it's the
+minimal ownership check §5 requires, demonstrated on reads. Empty scope denies by default.
+
 ### Bank integration: strategy + router, not a single gateway
 `BankGateway` is an interface with one impl per bank; `BankRouter` discovers all impls via CDI
 (`Instance<BankGateway>`) and picks by anchor→bank mapping. **Why:** a lender disburses through

@@ -2,7 +2,9 @@ package com.starter.drawdown.internal;
 
 import com.starter.applicant.ApplicantApi;
 import com.starter.common.exception.BusinessValidationException;
+import com.starter.common.exception.ForbiddenException;
 import com.starter.common.exception.NotFoundException;
+import com.starter.common.web.CallerContext;
 import com.starter.drawdown.DrawdownApi;
 import com.starter.drawdown.domain.Drawdown;
 import com.starter.payment.PaymentApi;
@@ -24,6 +26,7 @@ public class DrawdownService implements DrawdownApi {
     @Inject DrawdownRepo repo;
     @Inject ApplicantApi applicantApi; // other modules only via their Api interface
     @Inject PaymentApi paymentApi;
+    @Inject CallerContext callerContext;
 
     @Override
     @Transactional
@@ -46,6 +49,11 @@ public class DrawdownService implements DrawdownApi {
         var drawdown =
                 repo.findByIdOptional(id)
                         .orElseThrow(() -> new NotFoundException("Drawdown not found"));
+        // Record-level scope check using the gateway-provided identity — never an id from the
+        // request. Mutations (create/disburse) would enforce the same way.
+        if (!callerContext.mayAccessAnchor(drawdown.anchorCode)) {
+            throw new ForbiddenException("No access to anchor " + drawdown.anchorCode);
+        }
         var applicant = applicantApi.findById(drawdown.applicantId);
         return toInfo(drawdown, applicant.name());
     }

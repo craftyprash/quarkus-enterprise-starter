@@ -195,7 +195,7 @@ This service runs **behind the API gateway (APISix)**. Authentication and author
 
 - **Do not add in-app auth.** No JWT parsing, no permission filter, no `@RolesAllowed`/`@RequiresPermission`, no auth interceptor — unless a ticket explicitly asks for it. There is deliberately no `common/security` package in this template.
 - **Never trust client input as identity or authority.** If the gateway forwards a caller identity (e.g. a header), treat it as untrusted metadata: validate it, and never let a path/body value decide what the caller may access.
-- **Still enforce, in every endpoint:** full input validation (§4), least-data responses (don't return more than the caller needs), and — where a row belongs to a specific tenant/user — an ownership check in the service using the *gateway-provided, validated* identity, never an ID taken straight from the request.
+- **Still enforce, in every endpoint:** full input validation (§4), least-data responses (don't return more than the caller needs), and — where a row belongs to a specific tenant/user — an ownership check in the service using the *gateway-provided, validated* identity, never an ID taken straight from the request. Reference: `GatewayIdentityFilter` populates `CallerContext` from the `X-Anchor-Scope` header, and `DrawdownService.findById` rejects out-of-scope reads with `ForbiddenException` (403).
 - Do not widen `@PermitAll`, disable TLS, or add a permissive CORS filter to "make auth work" — that's the gateway's job.
 
 ---
