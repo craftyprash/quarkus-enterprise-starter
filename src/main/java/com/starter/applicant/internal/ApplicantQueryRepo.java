@@ -19,7 +19,10 @@ public class ApplicantQueryRepo {
     private static final Map<String, String> SORT_COLUMNS =
             Map.of("id", "id", "name", "name", "status", "status", "createdAt", "created_at");
 
-    /** Paginated list — safe dynamic ORDER BY via allow-list; LIMIT/OFFSET via bound params. */
+    /**
+     * Paginated list — safe dynamic ORDER BY via allow-list; LIMIT/OFFSET via bound params. {@code
+     * page} is 1-based (page 1 is the first page).
+     */
     public List<Summary> findActive(int page, int size, String sort, String order) {
         var column = SORT_COLUMNS.getOrDefault(sort, "id");
         var direction = "desc".equalsIgnoreCase(order) ? "DESC" : "ASC";
@@ -30,7 +33,7 @@ public class ApplicantQueryRepo {
                         + " "
                         + direction
                         + " LIMIT ?2 OFFSET ?3";
-        return queryRepo.sql(sql, "ACTIVE", size, page * size).map(this::toSummary).toList();
+        return queryRepo.sql(sql, "ACTIVE", size, (page - 1) * size).map(this::toSummary).toList();
     }
 
     /** Scalar query — total count for pagination metadata. */

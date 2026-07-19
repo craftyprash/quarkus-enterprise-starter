@@ -2,6 +2,7 @@ package com.starter.applicant;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -70,13 +71,28 @@ class ApplicantResourceTest {
                 .statusCode(201);
 
         given().when()
-                .get("/api/v1/applicants?page=0&size=5&sort=name&order=asc")
+                .get("/api/v1/applicants?page=1&size=5&sort=name&order=asc")
                 .then()
                 .statusCode(200)
                 .body("content", notNullValue())
-                .body("page", equalTo(0))
+                .body("page", equalTo(1))
                 .body("size", equalTo(5))
                 .body("$", hasKey("totalElements"))
                 .body("$", hasKey("totalPages"));
+    }
+
+    @Test
+    void invalidBodyReturnsFieldLevelErrors() {
+        given().contentType("application/json")
+                .body(
+                        """
+                        {"name": "", "email": "not-an-email"}
+                        """)
+                .when()
+                .post("/api/v1/applicants")
+                .then()
+                .statusCode(400)
+                .body("status", equalTo("error"))
+                .body("errors.field", hasItems("name", "email"));
     }
 }

@@ -37,7 +37,7 @@ public class ApplicantResource {
 
     @GET
     public PageRes<ApplicantRes> listActive(
-            @QueryParam("page") @DefaultValue("0") @Min(0) int page,
+            @QueryParam("page") @DefaultValue("1") @Min(1) int page,
             @QueryParam("size") @DefaultValue("10") @Min(1) @Max(100) int size,
             @QueryParam("sort") @DefaultValue("id") String sort,
             @QueryParam("order") @DefaultValue("asc") String order) {

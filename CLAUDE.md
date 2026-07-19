@@ -2,14 +2,14 @@
 
 You are writing code for a **regulated NBFC lending system**. Money moves, PII is stored, every change is auditable. Code that "works" but breaks a rule below is a **defect**, not a contribution.
 
-This is a **starter template**. Mirror the one reference module (`com.starter.applicant`) and `com.starter.common.*` — don't invent new structure. Read this file fully before writing code. When this file and your instinct disagree, this file wins.
+This is a **starter template**. Mirror the reference modules — **`applicant`** (simple CRUD + pagination), **`drawdown`** (cross-module orchestration), **`payment`** (money + outbox processors) — and `com.starter.common.*`. Pick whichever is closest to your task; don't invent new structure. Read this file fully before writing code. When this file and your instinct disagree, this file wins.
 
 ---
 
 ## 0. Prime directives
 
 1. **Never invent.** Do not fabricate config keys, table names, endpoints, permission names, class names, or library methods. If something isn't in the code, say so — don't assume it exists. This repo is small: `grep` before you claim.
-2. **Follow the existing pattern.** The closest existing code is `com.starter.applicant` and `com.starter.common.*`. Mirror it exactly. Novel structure is a defect even when it looks "better".
+2. **Follow the existing pattern.** Mirror the closest reference module — `applicant`, `drawdown`, or `payment` — and `com.starter.common.*`. Match it exactly. Novel structure is a defect even when it looks "better".
 3. **Never weaken a check to go green.** No deleting/skipping/`@Disabled` tests, no relaxing an ArchUnit rule, no `-DskipTests`, no `@SuppressWarnings`, no `spotless:off`. If a check fails, fix the code.
 4. **Never touch secrets.** Do not read, print, log, commit, or hardcode anything from `.env`, keystores, tokens, or credentials.
 5. **Never guess a business rule.** Interest, fees, eligibility, limits, statuses, rounding — if it isn't written in code or the ticket, **stop and ask**.
@@ -74,7 +74,7 @@ com.starter.applicant/
   domain/                    ← JPA entities
 ```
 
-Shared infrastructure lives in `com.starter.common.*` (`security`, `query`, `domain`, `exception`) — never inside a module's `internal/`.
+Shared infrastructure lives in `com.starter.common.*` (`api`, `query`, `domain`, `exception`, `integration`) — never inside a module's `internal/`.
 
 | Package | Contains | Must NOT contain |
 |---|---|---|
@@ -98,6 +98,8 @@ Shared infrastructure lives in `com.starter.common.*` (`security`, `query`, `dom
 | Business logic | `Service` | `internal/` |
 | JPA entity | *(no suffix)* | `domain/` |
 | REST client | `Client` | `common/` (a `@RegisterRestClient` interface you add — §12) |
+| Integration gateway | `Gateway` | `common/integration/` |
+| Scheduled processor/poller | `Processor` / `Poller` | `internal/` |
 
 Never use: `Controller`, `Manager`, `Impl`, `DTO`, `Util`, `Helper`, `Repository`.
 
@@ -133,7 +135,7 @@ public class ApplicantResource {
 
     @GET
     public PageRes<ApplicantRes> listActive(
-            @QueryParam("page") @DefaultValue("0") @Min(0) int page,
+            @QueryParam("page") @DefaultValue("1") @Min(1) int page,
             @QueryParam("size") @DefaultValue("10") @Min(1) @Max(100) int size,
             @QueryParam("sort") @DefaultValue("id") String sort,
             @QueryParam("order") @DefaultValue("asc") String order) {
@@ -148,33 +150,38 @@ public class ApplicantResource {
 - Never accept an entity or a contract record as the HTTP body.
 - Never accept a client-supplied `id`, `status`, `userId`, `createdAt`, or any amount that should be server-derived. Keep `Req` records minimal — that's what prevents mass-assignment.
 - The `Res` record must not expose internal IDs the caller isn't entitled to, full PII, or fields beyond what the endpoint needs.
-- **Errors come only from `GlobalExceptionMapper`.** Never build error JSON by hand; never leak stack traces, SQL, or vendor messages to the client.
+- **Errors come only from the `common/exception` mappers** (`GlobalExceptionMapper` + `ValidationExceptionMapper`). Never build error JSON by hand; never leak stack traces, SQL, or vendor messages to the client.
 
 ### URI conventions
 
 - **Version and pluralise:** `/api/v1/applicants`. Nouns, not verbs — the HTTP method is the verb (`GET`/`POST`/`PUT`/`DELETE /api/v1/applicants[/{id}]`). Never `/getApplicant`, `/api/v1/applicants/{id}/approve` → model state changes as a `PUT`/`POST` on a sub-resource or a status field, not an action verb.
 - **Nest for relationships:** `/api/v1/applicants/{applicantId}/documents`.
-- **Query params for filter/sort/pagination:** `/api/v1/applicants?status=active&sort=name&order=asc&page=0&size=10`. Never put filters in the path.
+- **Query params for filter/sort/pagination:** `/api/v1/applicants?status=active&sort=name&order=asc&page=1&size=10`. Never put filters in the path.
 
 ### Pagination — the house shape
 
-List endpoints page with `page` (0-based), `size`, `sort`, `order` (`asc`/`desc`) and return `common.api.PageRes<T>`:
+List endpoints page with `page` (**1-based** — page 1 is the first page), `size`, `sort`, `order` (`asc`/`desc`) and return `common.api.PageRes<T>`:
 
 ```json
-{ "content": [ ... ], "page": 0, "size": 10, "totalElements": 21, "totalPages": 3 }
+{ "content": [ ... ], "page": 1, "size": 10, "totalElements": 21, "totalPages": 3 }
 ```
 
-- Sensible defaults (`page=0`, `size=10`) and a hard `@Max` on `size`.
+- Sensible defaults (`page=1`, `size=10`), `@Min(1)` on `page`, and a hard `@Max` on `size`.
 - **`sort` maps through a fixed allow-list to a real column** before it touches SQL — never interpolate the raw value (see `ApplicantQueryRepo.SORT_COLUMNS`, §6).
 
-### Response shape — house style overrides the org REST guide
+### Response shape — bare success, org-style errors
 
-The organisation's REST guide specifies a `{ "status": "success", "data": ... }` success envelope and a `{ "status": "error", "errors": [...] }` error envelope. **This repo does not use those** — the established house convention wins on this conflict:
+- **Success** = the bare `Res` record (or `PageRes<Res>`). No `{ "status": "success", "data": … }` envelope — the org guide's success wrapper is **not** used here.
+- **Errors** = the `common/exception` mappers only, following the org guide's error structure:
 
-- **Success** = the bare `Res` record (or `PageRes<Res>`). No envelope, no `status`/`data` wrapper.
-- **Errors** = `GlobalExceptionMapper` only, shape `ErrorRes(int status, String error, String message)` (§9).
+```json
+{ "status": "error", "message": "Validation failed",
+  "errors": [ { "field": "email", "message": "must be a valid email" } ] }
+```
 
-Follow every other part of the org REST guide (URIs, methods, pagination params, status codes); just keep this repo's response/error shapes.
+`errors` carries field-level detail for validation failures (400) and is `[]` otherwise; the HTTP status conveys the category. Never build error JSON by hand.
+
+Follow every other part of the org REST guide (URIs, methods, pagination params, status codes).
 
 ### Status codes
 
@@ -217,6 +224,8 @@ public class Applicant extends BaseEntity {
 
 **Repositories** — `@ApplicationScoped`, `implements PanacheRepository<Entity>`. Native SQL goes in a `QueryRepo` projected via `Tuple` (never `Object[]`), following the existing `ApplicantQueryRepo`.
 
+No column-level audit trail (Hibernate Envers / `@Audited`) is wired in — don't add `@Audited` assuming it exists. If a ticket needs one, add `quarkus-hibernate-envers` first and say so in the handoff.
+
 **SQL safety — hard rule:** every query is parameterized (`?1`, named params, Panache params). **String concatenation / `String.format` / interpolation into any SQL, JPQL, or `LIKE` clause is forbidden.** No dynamic `ORDER BY` or table names from user input — map user input to a fixed allow-list of columns.
 
 > Schema: **Flyway owns it** (`quarkus.hibernate-orm.database.generation=none` — Hibernate never creates or alters tables). If your change needs schema, add a new versioned SQL migration under `src/main/resources/db/migration/` (`V2__add_x.sql`, `V3__…`). **Never edit a migration that has shipped — add the next one.** Migrations apply on startup in dev/staging/production (`quarkus.flyway.migrate-at-start=true`); tests use H2 + Hibernate `drop-and-create` with Flyway off. Always `TIMESTAMPTZ` for time, `NUMERIC(15,2)` for money, snake_case columns, FK constraints and `NOT NULL` where the domain requires them.
@@ -237,7 +246,7 @@ public class Applicant extends BaseEntity {
 
 - `@Transactional` (from `jakarta.transaction`) lives **only** in `internal/` services.
 - **Never make a remote call inside a transaction.** A slow bank/LMS/credit-bureau call holds a DB connection and exhausts the pool.
-- For side effects that must survive a crash (disbursement, notifications), persist an event row in the same transaction and let a scheduled `Processor`/`Poller` do the remote call after commit (outbox pattern). **This is not built in this template yet** — if you need it, build it in `internal/` following this shape; don't assume an outbox exists.
+- For side effects that must survive a crash (disbursement, notifications), use the **outbox pattern** — the `payment` module is the reference. `PaymentService.initiate` writes the `payment` row **and** an `OutboxEvent` row in one transaction and makes **no** remote call. `DisbursementProcessor`/`NeftSettlementPoller` (`@Scheduled`, in `internal/`) then drain the outbox: each **claims** an event in one short transaction, makes the bank/LMS call **outside** any transaction, and writes the terminal status in a second transaction. Never collapse those into one `@Transactional` method — that reintroduces a remote call inside a transaction.
 
 **Anything that moves money must be idempotent under retry:** guard on status, dedupe on the external reference, set an explicit terminal status on every failure path (no silent `continue`), and validate state transitions (`if (!"PENDING".equals(status)) throw new IllegalStateException(...)`) rather than assuming them.
 
@@ -305,10 +314,11 @@ Deployment is **Kamal** — Docker image built from the root `Dockerfile`, confi
 
 ## 12. External integrations
 
-The `quarkus-rest-client-jackson` extension is included for outbound calls. For a new integration:
+The `quarkus-rest-client-jackson` extension is included for outbound calls. `common/integration` holds the reference gateways (`BankGateway`, `LmsGateway` — in-process mocks in this template). For a new integration:
 
 1. Define a `{X}Client` — `@RegisterRestClient(configKey = "...")` interface in `common/`, HTTP contract only, URL from config per profile.
-2. Modules inject a **service/gateway wrapper**, never the raw client.
+2. Wrap it in a `{X}Gateway` (`@ApplicationScoped`) in `common/integration/`; modules inject the **gateway**, never the raw client.
+3. Call gateways only from outbox processors, **outside** any transaction (§8).
 
 - Every outbound call must have a **timeout** configured — no unbounded REST clients.
 - Never trust an upstream response: check status, null-check fields, validate amounts/references before persisting.

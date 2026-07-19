@@ -95,6 +95,12 @@
       <artifactId>quarkus-cache</artifactId>
     </dependency>
 
+    <!-- Scheduler (outbox processors / pollers) -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-scheduler</artifactId>
+    </dependency>
+
 
     <!-- Test -->
     <dependency>
