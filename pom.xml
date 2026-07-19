@@ -22,6 +22,7 @@
 
     <spotless.version>2.44.4</spotless.version>
     <archunit.version>1.4.1</archunit.version>
+    <jacoco.version>0.8.15</jacoco.version>
     <surefire.version>3.5.2</surefire.version>
     <compiler.version>3.14.0</compiler.version>
   </properties>
@@ -124,6 +125,11 @@
       <scope>test</scope>
     </dependency>
     <!-- Tests run against a throwaway PostgreSQL via Quarkus Dev Services (Testcontainers). -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jacoco</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -201,6 +207,35 @@
         </executions>
       </plugin>
 
+
+      <!-- Coverage gate: quarkus-jacoco writes jacoco-quarkus.exec; fail the build if it drops. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>coverage-gate</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+            <configuration>
+              <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.85</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
