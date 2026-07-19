@@ -89,6 +89,32 @@ code — run `mvn spotless:apply` before committing.
 
 ---
 
+## Quality & security tooling
+
+Almost all of it is **automatic** — gates that fire at different moments. You rarely run any by hand.
+
+| When | Tool | Catches | You do |
+|---|---|---|---|
+| **`git commit`** (local) | gitleaks hook · commit-msg hook | committed secrets · bad commit format | nothing unless it blocks you |
+| **`mvn verify`** (local + CI) | Spotless · SpotBugs + Find-Sec-Bugs · ArchUnit · tests + JaCoCo | formatting · bugs & security in *your code* · architecture drift · coverage < 85% | fix what goes red |
+| **CI** (every PR/push) | *(all of `mvn verify`, plus)* Trivy · gitleaks | dependency CVEs · image/secret/misconfig · secrets in history | bump the flagged dep |
+| **Weekly** (scheduled) | Trivy · Renovate | newly-disclosed CVEs · out-of-date dependencies | review & merge Renovate's PRs |
+
+Think of it as: **your code** is guarded by Spotless/ArchUnit/SpotBugs/JaCoCo, **your dependencies** by
+Trivy + Renovate, **your secrets** by gitleaks. Nothing overlaps.
+
+**Your whole day-to-day is three things:**
+
+1. Before pushing: `mvn spotless:apply` then `mvn clean verify` (green = all local gates pass).
+2. When a gate goes red (local or CI): read the message, fix the one thing it names.
+3. Weekly: review and merge the [Renovate](renovate.json) dependency PRs (CI has already vetted them).
+
+Config lives in: `pom.xml` (SpotBugs `spotbugs-exclude.xml`, JaCoCo gate), `.github/workflows/security.yml`
+(Trivy + gitleaks), `.gitleaks.toml`, `.github/workflows/renovate.yml` + `renovate.json`. Renovate needs a
+one-time Forgejo bot token (`RENOVATE_TOKEN`) — see that workflow's header. Rationale in [DECISIONS.md](DECISIONS.md).
+
+---
+
 ## Working with AI agents (Claude Code)
 
 You may use AI to write code — but you own what you hand off:
