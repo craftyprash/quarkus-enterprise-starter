@@ -1,0 +1,32 @@
+name: Renovate
+
+# Opens PRs to update dependencies (pom.xml), CI actions, Dockerfile, etc.
+# Self-hosted via the renovate CLI image so it runs on Forgejo Actions runners.
+#
+# One-time setup:
+#   1. Create a bot user in Forgejo (e.g. "renovate") with a Personal Access Token
+#      scoped to: repository (read/write), issue, pull request.
+#   2. Add that token as an Actions secret named RENOVATE_TOKEN.
+#   3. (Optional) set the vars/endpoint below to your Forgejo instance.
+# Behaviour is controlled by renovate.json at the repo root.
+
+on:
+  schedule:
+    - cron: "0 2 * * 1" # weekly, Mondays 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Renovate
+        run: |
+          docker run --rm \
+            -e RENOVATE_PLATFORM=forgejo \
+            -e RENOVATE_ENDPOINT="${RENOVATE_ENDPOINT:-https://git.example.com/api/v1}" \
+            -e RENOVATE_TOKEN="${{ secrets.RENOVATE_TOKEN }}" \
+            -e RENOVATE_REPOSITORIES="${{ github.repository }}" \
+            -e RENOVATE_GIT_AUTHOR="Renovate Bot <renovate@example.com>" \
+            -e LOG_LEVEL=info \
+            renovate/renovate:latest
+        # Renovate 37+ supports RENOVATE_PLATFORM=forgejo; on older versions use "gitea".
