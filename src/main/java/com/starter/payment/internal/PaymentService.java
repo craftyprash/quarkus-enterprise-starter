@@ -9,6 +9,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -23,6 +25,9 @@ import org.slf4j.LoggerFactory;
 public class PaymentService implements PaymentApi {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
+
+    private static final int MAX_ATTEMPTS = 3; // then dead-letter
+    private static final Duration LEASE = Duration.ofMinutes(1); // claim lease before reclaim
 
     @Inject PaymentRepo paymentRepo;
     @Inject OutboxRepo outboxRepo;
@@ -89,18 +94,20 @@ public class PaymentService implements PaymentApi {
     // ── Outbox transactional steps (called by the processors) ──────────
 
     @Transactional
-    public List<Long> pendingDisbursementEventIds() {
-        return outboxRepo.findPending("DISBURSE_REQUESTED").stream().map(e -> e.id).toList();
+    public List<Long> claimableDisbursementEventIds() {
+        return outboxRepo.findClaimable("DISBURSE_REQUESTED", Instant.now()).stream()
+                .map(e -> e.id)
+                .toList();
     }
 
     /**
-     * Claim one event: mark it IN_PROGRESS and the payment PROCESSING. Returns empty if not
-     * claimable.
+     * Claim one event (fresh, or stuck with an expired lease): mark it IN_PROGRESS with a new
+     * lease, bump the attempt count, and the payment PROCESSING. Empty if not claimable.
      */
     @Transactional
     public Optional<DisburseTask> claim(Long eventId) {
         var event = outboxRepo.findById(eventId);
-        if (event == null || !"PENDING".equals(event.status)) {
+        if (event == null || !isClaimable(event)) {
             return Optional.empty();
         }
         var payment = paymentRepo.findById(event.aggregateId);
@@ -110,6 +117,8 @@ public class PaymentService implements PaymentApi {
             return Optional.empty();
         }
         event.status = "IN_PROGRESS";
+        event.attempts += 1;
+        event.lockedUntil = Instant.now().plus(LEASE);
         payment.status = "PROCESSING";
         return Optional.of(
                 new DisburseTask(
@@ -139,11 +148,19 @@ public class PaymentService implements PaymentApi {
 
     @Transactional
     public void failDisbursement(Long eventId, Long paymentId) {
-        var payment = paymentRepo.findById(paymentId);
-        if (payment != null && "PROCESSING".equals(payment.status)) {
-            payment.status = "FAILED";
+        var event = outboxRepo.findById(eventId);
+        boolean dead = event != null && event.attempts >= MAX_ATTEMPTS;
+        if (event != null) {
+            event.status = dead ? "DEAD" : "PENDING"; // dead-letter, or retry on the next tick
+            event.lockedUntil = null;
         }
-        markEvent(eventId, "FAILED");
+        if (dead) {
+            var payment = paymentRepo.findById(paymentId);
+            if (payment != null) {
+                payment.status = "FAILED";
+                log.error("Payment dead-lettered after {} attempts id={}", MAX_ATTEMPTS, paymentId);
+            }
+        }
     }
 
     @Transactional
@@ -168,6 +185,13 @@ public class PaymentService implements PaymentApi {
         if (payment != null && "POLLING".equals(payment.status)) {
             payment.status = "FAILED";
         }
+    }
+
+    private static boolean isClaimable(OutboxEvent event) {
+        return "PENDING".equals(event.status)
+                || ("IN_PROGRESS".equals(event.status)
+                        && event.lockedUntil != null
+                        && event.lockedUntil.isBefore(Instant.now()));
     }
 
     private Payment requireProcessing(Long paymentId) {

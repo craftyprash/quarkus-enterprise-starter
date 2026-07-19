@@ -49,6 +49,14 @@ reference implementation we started from wrapped the whole processor in `@Transa
 bank call inside it — holding a DB connection across a slow remote call, the exact failure the outbox
 exists to prevent. **Trade-off:** more methods/transaction boundaries, but it's correct and idempotent.
 
+### Outbox hardening: retry with dead-letter + lease reclaim
+`OutboxEvent` carries `attempts` and a `lockedUntil` lease. A claim leases the event; a transient
+failure sends it back to `PENDING` to retry until `MAX_ATTEMPTS`, then dead-letters it (`DEAD`, payment
+`FAILED`); a stuck `IN_PROGRESS` event whose worker crashed is reclaimed once the lease expires.
+**Why:** a bare outbox (the shape the original shipped) can retry forever, or strand an event a crashed
+worker had claimed. **Trade-off:** a few more states/columns; the `MAX_ATTEMPTS`/lease values are
+illustrative constants. Both paths are covered by tests (`OutboxHardeningTest`).
+
 ### REST: bare success bodies, org-style errors with field detail
 Success responses are the bare `Res`/`PageRes` record — **no** `{status, data}` envelope. Errors use
 the org guide's `{ status, message, errors[] }` with field-level detail on 400s. **Why:** the envelope

@@ -25,7 +25,7 @@ public class DisbursementProcessor {
 
     @Scheduled(every = "5s", identity = "disbursement-processor")
     public void processPending() {
-        for (var eventId : paymentService.pendingDisbursementEventIds()) {
+        for (var eventId : paymentService.claimableDisbursementEventIds()) {
             processOne(eventId);
         }
     }

@@ -250,6 +250,8 @@ public class Applicant extends BaseEntity {
 
 **Anything that moves money must be idempotent under retry:** guard on status, dedupe on the external reference, set an explicit terminal status on every failure path (no silent `continue`), and validate state transitions (`if (!"PENDING".equals(status)) throw new IllegalStateException(...)`) rather than assuming them.
 
+The outbox is **hardened** (see `OutboxEvent.attempts`/`lockedUntil`): a claim takes a time-boxed **lease**, transient failures **retry** (event back to `PENDING`) until `MAX_ATTEMPTS` then **dead-letter** (`DEAD`, payment `FAILED`), and a crashed worker's stuck `IN_PROGRESS` event is **reclaimed** once its lease expires (`OutboxRepo.findClaimable`). Don't build an outbox that can lose an event, retry forever, or strand one mid-flight.
+
 ---
 
 ## 9. Exceptions

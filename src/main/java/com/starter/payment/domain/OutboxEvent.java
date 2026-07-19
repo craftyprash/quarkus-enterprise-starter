@@ -4,6 +4,7 @@ import com.starter.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -28,6 +29,14 @@ public class OutboxEvent extends BaseEntity {
 
     @Column(nullable = false)
     public String status = "PENDING";
+
+    /** How many times processing has been attempted; drives dead-lettering after a max. */
+    @Column(nullable = false)
+    public int attempts = 0;
+
+    /** Lease expiry while IN_PROGRESS; an expired lease means a stuck event to reclaim. */
+    @Column(name = "locked_until")
+    public Instant lockedUntil;
 
     protected OutboxEvent() {}
 
