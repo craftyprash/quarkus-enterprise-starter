@@ -32,7 +32,7 @@ This is a **starter template**. Mirror the reference modules — **`applicant`**
 |---|---|
 | Language | **Java 25 (LTS)** on **Quarkus 3.33 LTS** — no preview features, no `--enable-preview`, no build workarounds |
 | Framework | **Quarkus** (REST + Jackson, Hibernate ORM + Panache, Hibernate Validator) |
-| DB | **PostgreSQL** (H2 for tests) |
+| DB | **PostgreSQL** everywhere — dev, prod, and tests (throwaway Postgres via Quarkus Dev Services / Testcontainers) |
 | Build | **Maven** + Spotless (Google Java Format, AOSP) + ArchUnit |
 | Java version | **mise** — `mise.toml` pins it |
 | Auth | **None in-app** — authentication & authorization are handled by the **API gateway (APISix)** in front of the service (§5) |
@@ -224,11 +224,11 @@ public class Applicant extends BaseEntity {
 
 **Repositories** — `@ApplicationScoped`, `implements PanacheRepository<Entity>`. Native SQL goes in a `QueryRepo` projected via `Tuple` (never `Object[]`), following the existing `ApplicantQueryRepo`.
 
-No column-level audit trail (Hibernate Envers / `@Audited`) is wired in — don't add `@Audited` assuming it exists. If a ticket needs one, add `quarkus-hibernate-envers` first and say so in the handoff.
+**Audit trail:** `payment` and `drawdown` are `@Audited` (Hibernate Envers) — every change is versioned in `*_aud`. Add `@Audited` to entities whose history is regulated/material. Envers audit tables are **not** auto-created under `generation=none`; add their DDL to a Flyway migration (see `V3__envers_audit_tables.sql`).
 
 **SQL safety — hard rule:** every query is parameterized (`?1`, named params, Panache params). **String concatenation / `String.format` / interpolation into any SQL, JPQL, or `LIKE` clause is forbidden.** No dynamic `ORDER BY` or table names from user input — map user input to a fixed allow-list of columns.
 
-> Schema: **Flyway owns it** (`quarkus.hibernate-orm.database.generation=none` — Hibernate never creates or alters tables). If your change needs schema, add a new versioned SQL migration under `src/main/resources/db/migration/` (`V2__add_x.sql`, `V3__…`). **Never edit a migration that has shipped — add the next one.** Migrations apply on startup in dev/staging/production (`quarkus.flyway.migrate-at-start=true`); tests use H2 + Hibernate `drop-and-create` with Flyway off. Always `TIMESTAMPTZ` for time, `NUMERIC(15,2)` for money, snake_case columns, FK constraints and `NOT NULL` where the domain requires them.
+> Schema: **Flyway owns it** (`quarkus.hibernate-orm.database.generation=none` — Hibernate never creates or alters tables). If your change needs schema, add a new versioned SQL migration under `src/main/resources/db/migration/` (`V2__add_x.sql`, `V3__…`). **Never edit a migration that has shipped — add the next one.** Migrations apply on startup in dev/staging/production **and in tests** (`quarkus.flyway.migrate-at-start=true`) — tests run against a throwaway Postgres (Dev Services), so the migrations are exercised, not just the entities. Always `TIMESTAMPTZ` for time, `NUMERIC(15,2)` for money, snake_case columns, FK constraints and `NOT NULL` where the domain requires them.
 
 ---
 
@@ -303,7 +303,7 @@ log.info("Applicant created id={}", applicant.id);
 |---|---|---|
 | `application.properties` | shared config | yes |
 | `application-dev.properties` | local dev JDBC URL (docker-compose DB) | yes |
-| `application-test.properties` | H2, schema gen | yes |
+| `application-test.properties` | Postgres Dev Services, Flyway | yes |
 | `application-staging.properties` / `application-production.properties` | profile config (non-secret) | yes |
 | `.env` | **credentials only** | **no** |
 
@@ -340,7 +340,7 @@ The `quarkus-rest-client-jackson` extension is included for outbound calls. `com
 
 ## 13. Testing — part of the change, not a follow-up
 
-A change without tests is not done. Tests run against **H2** with external REST clients disabled (mirror `ApplicantResourceTest`). Minimum for any new endpoint or service method:
+A change without tests is not done. Tests run against a **throwaway Postgres** (Quarkus Dev Services / Testcontainers — **Docker must be running**) with Flyway migrations applied (mirror `ApplicantResourceTest`). Minimum for any new endpoint or service method:
 
 - **Happy path** integration test through the REST layer.
 - **Validation** — invalid/missing fields return 400.

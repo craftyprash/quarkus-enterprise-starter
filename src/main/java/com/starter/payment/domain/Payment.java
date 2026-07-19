@@ -5,8 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import java.math.BigDecimal;
 import java.util.Objects;
+import org.hibernate.envers.Audited;
 
 @Entity
+@Audited // every change to a payment is versioned in payment_aud (regulated audit trail)
 public class Payment extends BaseEntity {
 
     // One payment per drawdown — the DB unique constraint makes disbursement retry-safe.

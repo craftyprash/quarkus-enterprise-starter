@@ -25,13 +25,22 @@ identity blindly (documented in CLAUDE.md §5). Re-add in-app auth only if a tic
 **Why:** in a regulated NBFC, schema changes must be reviewed and auditable — Hibernate `update`
 can't do data migrations, has no rollback, and silently drifts. Flyway over Liquibase because we're
 Postgres-only and auditors read plain SQL, not a changelog DSL. **Trade-off:** you hand-write SQL and
-never edit a shipped migration (add the next `V*`). Tests use H2 + Hibernate `drop-and-create` (Flyway
-off), so migrations are exercised in dev/deploy, not the test suite.
+never edit a shipped migration (add the next `V*`). Tests run the same migrations against a throwaway
+Postgres (see Testcontainers below), so the SQL itself is exercised in CI — not just the entities.
 
-### No Hibernate Envers audit trail (yet)
-`@Audited` is deliberately absent. **Why:** it adds a dependency and audit tables not every service
-needs on day one. **Trade-off:** if column-level history is required, add `quarkus-hibernate-envers`
-and say so in the handoff — don't assume it exists.
+### Hibernate Envers audit trail on money entities
+`payment` and `drawdown` are `@Audited` — every change is versioned in `*_aud`. **Why:** a regulated
+lender must be able to reconstruct who/what changed a money record and when. **Trade-off:** Envers
+audit tables aren't created under `generation=none`, so their DDL lives in a Flyway migration
+(`V3__envers_audit_tables.sql`) — captured to match exactly what Envers writes and verified by a test
+that asserts audit rows appear.
+
+### Tests run on real Postgres (Testcontainers), not H2
+Test profile uses Quarkus Dev Services to start a throwaway `postgres:16-alpine` and applies the Flyway
+migrations. **Why:** H2 can't faithfully run our Postgres DDL (Envers tables, `TIMESTAMPTZ`,
+identity/sequences), and testing on a different engine than production hides drift; this also exercises
+the migrations themselves in CI. **Trade-off:** tests require Docker (fine in CI; Colima users set
+`DOCKER_HOST`). H2 was dropped entirely.
 
 ### Outbox: remote calls happen *outside* the transaction
 `initiate` writes the business row + an `OutboxEvent` in one transaction and makes no remote call. The

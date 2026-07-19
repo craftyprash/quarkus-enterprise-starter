@@ -54,6 +54,10 @@ mvn clean verify               # format check + ArchUnit + tests (must pass)
 
 Dev endpoints: Swagger UI `/q/swagger-ui` · health `/q/health` · metrics `/q/metrics` · Dev UI `/q/dev-ui`.
 
+> **Tests need Docker.** They run against a throwaway Postgres started by Quarkus Dev Services
+> (Testcontainers), and Flyway applies the real migrations. With Docker Desktop it works out of the
+> box; on **Colima** set `export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"`.
+
 ---
 
 ## Configuration
@@ -62,7 +66,7 @@ Dev endpoints: Swagger UI `/q/swagger-ui` · health `/q/health` · metrics `/q/m
 |---|---|---|
 | `application.properties` | shared config | yes |
 | `application-dev.properties` | local dev datasource (docker-compose DB) | yes |
-| `application-test.properties` | H2, schema generation | yes |
+| `application-test.properties` | Postgres Dev Services (Testcontainers) + Flyway | yes |
 | `application-staging.properties` / `application-production.properties` | profile config (non-secret) | yes |
 | `.env` | **credentials only** | **no** |
 
