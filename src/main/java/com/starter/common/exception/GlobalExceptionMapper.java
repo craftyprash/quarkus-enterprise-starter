@@ -32,10 +32,12 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
         return switch (ex) {
             case ForbiddenException e -> respond(403, e.getMessage());
             case NotFoundException e -> respond(404, e.getMessage());
-            case IllegalArgumentException e -> respond(422, e.getMessage());
+            case BusinessValidationException e -> respond(422, e.getMessage());
             case IllegalStateException e -> respond(409, e.getMessage());
             case DuplicateException e -> respond(409, e.getMessage());
             case ConstraintViolationException e -> validationResponse(e);
+            // IllegalArgumentException, NullPointerException, etc. are contract/programming errors:
+            // intentionally NOT mapped, so they surface as 500 (logged) rather than a client 4xx.
             default -> {
                 log.error("Unhandled exception", ex);
                 yield respond(500, "Internal server error");

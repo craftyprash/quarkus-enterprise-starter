@@ -82,6 +82,17 @@ class ApplicantResourceTest {
     }
 
     @Test
+    void invalidSortParamReturnsFieldError() {
+        // Programmatic validation (Validator) of a loose query param -> 400 with field-level error.
+        given().when()
+                .get("/api/v1/applicants?sort=name&order=sideways")
+                .then()
+                .statusCode(400)
+                .body("status", equalTo("error"))
+                .body("errors.field", hasItems("order"));
+    }
+
+    @Test
     void invalidBodyReturnsFieldLevelErrors() {
         given().contentType("application/json")
                 .body(

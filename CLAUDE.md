@@ -259,14 +259,23 @@ Services must not import `jakarta.ws.rs` (ArchUnit enforced) — never throw `ja
 | Throw | When | Status |
 |---|---|---|
 | `NotFoundException` (`common.exception`) | requested entity doesn't exist | 404 |
-| `ConstraintViolationException` (via `@Valid`) | request field shape invalid | 400 |
-| `IllegalArgumentException` | **semantic** argument error the annotations can't express (unknown code, business-rule arg) — **not** field-shape validation | 422 |
+| `ConstraintViolationException` (via `@Valid` or `Validator`) | request field shape invalid | 400 + `errors[]` |
+| `BusinessValidationException` (`common.exception`) | well-formed but violates a business/semantic rule | 422 |
 | `IllegalStateException` | wrong state for the operation | 409 |
 | `DuplicateException` | uniqueness violation | 409 |
 | `ForbiddenException` | permission / scope failure | 403 |
+| *(unmapped)* `IllegalArgumentException`, `NullPointerException`, … | method-contract / programming error | 500 |
 
-- **Not found:** throw `NotFoundException` (typically `repo.findByIdOptional(id).orElseThrow(() -> new NotFoundException(...))`). **Do not** map a raw `NoSuchElementException` to 404 — an empty collection or misused iterator is a bug and must surface as 500, not a client 404.
-- **Field validation** is Bean Validation's job (`@NotNull`/`@Positive`/… on `Req` + `@Valid`) → 400 with `errors[]`. Don't hand-roll null-checks in resources for what an annotation expresses.
+- **Not found:** throw `NotFoundException` (`repo.findByIdOptional(id).orElseThrow(() -> new NotFoundException(...))`). A raw `NoSuchElementException` is **not** mapped — an empty collection or misused iterator is a bug and must surface as 500, not a client 404.
+- **`IllegalArgumentException` is a programming error, not client input.** It (and `NPE`) are intentionally unmapped → 500. Never throw it to signal bad request data — use Bean Validation (400) or `BusinessValidationException` (422). `"page must be >= 1"` is `@Min(1)`, not a thrown exception.
+- **Field validation is normally declarative** — `@NotNull`/`@Positive`/`@Pattern`/… on `Req` + `@Valid` → 400 with `errors[]`. Cross-field rules use a class-level `@AssertTrue`/custom constraint (still declarative).
+- **When you must validate in code** (values assembled at runtime, shared allow-lists, conditional rules), reuse Bean Validation via the injected `Validator` — it yields the same 400 `errors[]` shape (see `ApplicantService.validateSort`):
+
+```java
+@Inject Validator validator;
+var violations = validator.validate(criteria);          // criteria = an annotated record
+if (!violations.isEmpty()) throw new ConstraintViolationException(violations);   // → 400 + errors[]
+```
 
 Never swallow an exception (`catch (Exception e) {}`), never `printStackTrace()`, never rethrow as a generic `RuntimeException` that loses the cause. Message text must be safe for an end user — no internals, SQL, or upstream vendor text. The `default` branch returns a generic 500 — keep it that way; don't leak the real cause.
 

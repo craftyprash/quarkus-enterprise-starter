@@ -57,6 +57,20 @@ class DrawdownResourceTest {
     }
 
     @Test
+    void amountOverSanctionedLimitReturns422() {
+        var applicantId = createApplicant("dd-limit@example.com");
+        given().contentType("application/json")
+                .body(
+                        "{\"applicantId\":"
+                                + applicantId
+                                + ",\"anchorCode\":\"TATA\",\"amount\":99999999.00}")
+                .post("/api/v1/drawdowns")
+                .then()
+                .statusCode(422)
+                .body("status", equalTo("error"));
+    }
+
+    @Test
     void negativeAmountReturns400() {
         var applicantId = createApplicant("dd2@example.com");
         given().contentType("application/json")
