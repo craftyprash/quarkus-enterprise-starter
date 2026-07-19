@@ -357,10 +357,10 @@ No test asserts only `assertNotNull`. No test is written to match buggy behavior
 
 ```bash
 mvn spotless:apply     # Google Java Format (AOSP) — run before committing
-mvn clean verify       # Spotless check + compile + ArchUnit (18 rules) + tests
+mvn clean verify       # Spotless + compile + SpotBugs/FindSecBugs + ArchUnit (18) + tests + JaCoCo gate (≥85%)
 ```
 
-`mvn clean verify` must pass. **Reporting "done" on a red build is a task failure.** Conventional commits (enforced by `.githooks/commit-msg`):
+`mvn clean verify` must pass — that includes **SpotBugs + Find-Security-Bugs** (bytecode bug/security analysis; exclusions in `spotbugs-exclude.xml` must stay small and justified) and the **JaCoCo coverage gate** (≥85% line). CI additionally runs **Trivy** (dependency CVEs + secrets + image) and **gitleaks** (`.github/workflows/security.yml`). **Reporting "done" on a red build is a task failure.** Conventional commits (enforced by `.githooks/commit-msg`):
 
 ```
 feat(applicant): add email validation

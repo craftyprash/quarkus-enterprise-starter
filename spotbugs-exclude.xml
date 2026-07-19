@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SpotBugs exclusions — kept small and justified. Everything else is enforced. -->
+<FindBugsFilter>
+  <!-- Entities use public fields and validate in constructors by design (Panache/Hibernate ORM
+       style; Objects.requireNonNull is our mandated pattern and these types aren't exploitably
+       finalizable). -->
+  <Match>
+    <Package name="~com\.starter\..*\.domain"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD,MS_PKGPROTECT,PA_PUBLIC_PRIMITIVE_ATTRIBUTE,UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD,CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- Records/DTOs carry caller-provided collections by value; "exposing" them is the point. -->
+  <Match>
+    <Or>
+      <Package name="~com\.starter\.common\.(api|exception|web)"/>
+      <Package name="~com\.starter\..*\.api\.response"/>
+    </Or>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+</FindBugsFilter>

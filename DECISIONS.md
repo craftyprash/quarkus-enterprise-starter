@@ -133,6 +133,16 @@ Docker image + `config/deploy.*.yml` + GitHub workflows, behind APISix. **Why:**
 existing Kamal-based rollout. DNS/TLS/registry/secrets are owned by DevOps — the committed configs use
 placeholders.
 
+### Quality & security gates: free tools, wired into the build/CI
+`mvn verify` runs **SpotBugs + Find-Security-Bugs** (bytecode bug/security analysis) and a **JaCoCo**
+coverage gate (≥85% line); CI adds **Trivy** (dependency CVEs, secrets, Dockerfile misconfig, base
+image) and **gitleaks** (committed secrets), with a gitleaks pre-commit hook. **Why:** catch bugs,
+CVEs, and leaked secrets automatically, with $0 tooling that runs identically on GitHub and Forgejo
+Actions. **Why these:** Error Prone was rejected — it needs `jdk.compiler` `--add-exports` javac flags
+(the kind of workaround we removed) and lags new JDKs; SpotBugs reads bytecode and is clean on Java 25.
+**Trade-off:** SpotBugs needs a small, documented exclude list for idiomatic Panache/record patterns
+(`spotbugs-exclude.xml`); keep it minimal. Semgrep/Renovate/SonarQube are sensible next additions.
+
 ### Docs: two for humans, one contract
 [CLAUDE.md](CLAUDE.md) is the standards contract (AI + human). [README.md](README.md) is onboarding.
 This file is the decision log. **Why:** the earlier `CONTRIBUTION.md`/`MAINTAINER.md`/`SETUP.md` sprawl

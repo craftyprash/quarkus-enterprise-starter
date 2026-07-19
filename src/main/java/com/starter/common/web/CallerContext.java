@@ -18,7 +18,8 @@ public class CallerContext {
     }
 
     public void setAnchorScope(Set<String> anchorScope) {
-        this.anchorScope = anchorScope;
+        this.anchorScope =
+                Set.copyOf(anchorScope); // defensive copy — caller can't mutate the scope
     }
 
     /** True if the caller is scoped to this anchor. Empty scope denies by default. */

@@ -23,6 +23,8 @@
     <spotless.version>2.44.4</spotless.version>
     <archunit.version>1.4.1</archunit.version>
     <jacoco.version>0.8.15</jacoco.version>
+    <spotbugs.version>4.10.3.0</spotbugs.version>
+    <findsecbugs.version>1.14.0</findsecbugs.version>
     <surefire.version>3.5.2</surefire.version>
     <compiler.version>3.14.0</compiler.version>
   </properties>
@@ -207,6 +209,32 @@
         </executions>
       </plugin>
 
+
+      <!-- SpotBugs + Find-Security-Bugs: bytecode bug/security analysis (fails on findings). -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${spotbugs.version}</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Medium</threshold>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+          <plugins>
+            <plugin>
+              <groupId>com.h3xstream.findsecbugs</groupId>
+              <artifactId>findsecbugs-plugin</artifactId>
+              <version>${findsecbugs.version}</version>
+            </plugin>
+          </plugins>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotbugs-check</id>
+            <phase>verify</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <!-- Coverage gate: quarkus-jacoco writes jacoco-quarkus.exec; fail the build if it drops. -->
       <plugin>
