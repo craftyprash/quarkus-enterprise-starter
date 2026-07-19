@@ -1,0 +1,60 @@
+name: Security Scan
+
+# Dependency CVEs, committed secrets, and Dockerfile/IaC misconfig. Runs on PRs/pushes and
+# weekly (new CVEs land against dependencies you haven't touched). Uses plain CLIs so it runs
+# the same on GitHub Actions and Forgejo Actions.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # Build so Trivy scans the resolved runtime jars, not just pom.xml.
+      - name: Build
+        run: mvn -B -U -DskipTests package
+
+      - name: Install Trivy
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan dependencies, secrets, and misconfig
+        run: >
+          trivy fs
+          --scanners vuln,secret,misconfig
+          --severity HIGH,CRITICAL
+          --exit-code 1
+          --no-progress
+          .
+
+      # Base image CVEs (OS packages / JRE) — cheap, no local build needed.
+      - name: Scan runtime base image
+        run: trivy image --severity HIGH,CRITICAL --exit-code 0 --no-progress eclipse-temurin:25-jre
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so gitleaks can scan past commits
+
+      - name: Scan for committed secrets
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo --redact --verbose

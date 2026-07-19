@@ -1,0 +1,13 @@
+#!/bin/sh
+# Block commits that introduce secrets. Runs gitleaks on staged changes if it's installed;
+# CI (.github/workflows/security.yml) enforces it regardless.
+if command -v gitleaks >/dev/null 2>&1; then
+    if ! gitleaks protect --staged --redact; then
+        echo "❌ gitleaks found a potential secret in staged changes — commit blocked."
+        echo "   Review the finding above; if it's a false positive, add a gitleaks allowlist entry."
+        exit 1
+    fi
+else
+    echo "ℹ gitleaks not installed — skipping local secret scan (CI still checks)."
+    echo "  Install: https://github.com/gitleaks/gitleaks"
+fi

@@ -1,0 +1,53 @@
+name: Rollback Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_type:
+        description: "Roll back to the previous version, or a specific one"
+        required: true
+        type: choice
+        options:
+          - previous
+          - specific_version
+      version:
+        description: "Version tag (only for specific_version, e.g. 1.2.3)"
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    # Self-hosted runner that can reach the production host via Kamal.
+    runs-on: [kamal, prod]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.rollback_type }}" = "specific_version" ] && [ -z "${{ inputs.version }}" ]; then
+            echo "❌ 'version' is required for a specific_version rollback"; exit 1
+          fi
+
+      - name: Prepare Kamal secrets
+        run: |
+          mkdir -p .kamal
+          cat <<EOF > .kamal/secrets.production
+          QUARKUS_DATASOURCE_USERNAME=${{ secrets.PROD_DB_USERNAME }}
+          QUARKUS_DATASOURCE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+          EOF
+
+      - name: Roll back via Kamal
+        run: |
+          if [ "${{ inputs.rollback_type }}" = "previous" ]; then
+            echo "🔄 Rolling back to the previous version"
+            kamal rollback -d production
+          else
+            VERSION="${{ inputs.version }}"; VERSION="${VERSION#v}"
+            echo "🔄 Rolling back to ${VERSION}"
+            VERSION="${VERSION}" kamal rollback -d production
+          fi
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f .kamal/secrets.*

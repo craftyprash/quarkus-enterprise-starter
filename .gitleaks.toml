@@ -1,0 +1,13 @@
+# gitleaks config — default rules plus an allowlist for template placeholders and
+# test-only, non-secret credentials that live in the repo by design.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Template placeholders and test/dev-only credentials (not real secrets)"
+paths = [
+  '''\.kamal/secrets\.example''',
+  '''src/main/resources/application-dev\.properties''',
+  '''src/main/resources/application-test\.properties''',
+  '''src/test/.*''',
+]
