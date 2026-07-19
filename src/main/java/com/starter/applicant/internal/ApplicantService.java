@@ -6,11 +6,11 @@ import com.starter.applicant.api.response.ApplicantRes;
 import com.starter.applicant.domain.Applicant;
 import com.starter.common.api.PageRes;
 import com.starter.common.exception.DuplicateException;
+import com.starter.common.exception.NotFoundException;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ public class ApplicantService implements ApplicantApi {
     public Info findById(Long id) {
         var a =
                 repo.findByIdOptional(id)
-                        .orElseThrow(() -> new NoSuchElementException("Applicant not found"));
+                        .orElseThrow(() -> new NotFoundException("Applicant not found"));
         return new Info(a.id, a.name, a.email, a.status, a.createdAt);
     }
 

@@ -1,13 +1,13 @@
 package com.starter.drawdown.internal;
 
 import com.starter.applicant.ApplicantApi;
+import com.starter.common.exception.NotFoundException;
 import com.starter.drawdown.DrawdownApi;
 import com.starter.drawdown.domain.Drawdown;
 import com.starter.payment.PaymentApi;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ public class DrawdownService implements DrawdownApi {
     public Info findById(Long id) {
         var drawdown =
                 repo.findByIdOptional(id)
-                        .orElseThrow(() -> new NoSuchElementException("Drawdown not found"));
+                        .orElseThrow(() -> new NotFoundException("Drawdown not found"));
         var applicant = applicantApi.findById(drawdown.applicantId);
         return toInfo(drawdown, applicant.name());
     }
@@ -44,7 +44,7 @@ public class DrawdownService implements DrawdownApi {
     public Info disburse(Long id) {
         var drawdown =
                 repo.findByIdOptional(id)
-                        .orElseThrow(() -> new NoSuchElementException("Drawdown not found"));
+                        .orElseThrow(() -> new NotFoundException("Drawdown not found"));
 
         if (!"PENDING".equals(drawdown.status)) {
             throw new IllegalStateException("Drawdown is not in PENDING status");

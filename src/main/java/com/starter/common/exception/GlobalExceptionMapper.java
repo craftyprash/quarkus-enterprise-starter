@@ -5,7 +5,6 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +31,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
     public Response toResponse(Exception ex) {
         return switch (ex) {
             case ForbiddenException e -> respond(403, e.getMessage());
-            case NoSuchElementException e -> respond(404, e.getMessage());
+            case NotFoundException e -> respond(404, e.getMessage());
             case IllegalArgumentException e -> respond(422, e.getMessage());
             case IllegalStateException e -> respond(409, e.getMessage());
             case DuplicateException e -> respond(409, e.getMessage());

@@ -254,16 +254,19 @@ No column-level audit trail (Hibernate Envers / `@Audited`) is wired in — don'
 
 ## 9. Exceptions
 
-Services must not import `jakarta.ws.rs` (ArchUnit enforced). Throw JDK or `common.exception` types; `GlobalExceptionMapper` maps them:
+Services must not import `jakarta.ws.rs` (ArchUnit enforced) — never throw `jakarta.ws.rs.NotFoundException` or any `WebApplicationException` from `internal/`. Throw JDK or `common.exception` types; `GlobalExceptionMapper` maps them:
 
-| Throw | Meaning | Status |
+| Throw | When | Status |
 |---|---|---|
-| `NoSuchElementException` | not found | 404 |
-| `IllegalArgumentException` | bad input / config | 422 |
-| `IllegalStateException` | wrong state | 409 |
+| `NotFoundException` (`common.exception`) | requested entity doesn't exist | 404 |
+| `ConstraintViolationException` (via `@Valid`) | request field shape invalid | 400 |
+| `IllegalArgumentException` | **semantic** argument error the annotations can't express (unknown code, business-rule arg) — **not** field-shape validation | 422 |
+| `IllegalStateException` | wrong state for the operation | 409 |
 | `DuplicateException` | uniqueness violation | 409 |
 | `ForbiddenException` | permission / scope failure | 403 |
-| `ConstraintViolationException` | validation failure | 400 |
+
+- **Not found:** throw `NotFoundException` (typically `repo.findByIdOptional(id).orElseThrow(() -> new NotFoundException(...))`). **Do not** map a raw `NoSuchElementException` to 404 — an empty collection or misused iterator is a bug and must surface as 500, not a client 404.
+- **Field validation** is Bean Validation's job (`@NotNull`/`@Positive`/… on `Req` + `@Valid`) → 400 with `errors[]`. Don't hand-roll null-checks in resources for what an annotation expresses.
 
 Never swallow an exception (`catch (Exception e) {}`), never `printStackTrace()`, never rethrow as a generic `RuntimeException` that loses the cause. Message text must be safe for an end user — no internals, SQL, or upstream vendor text. The `default` branch returns a generic 500 — keep it that way; don't leak the real cause.
 

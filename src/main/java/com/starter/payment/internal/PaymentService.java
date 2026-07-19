@@ -1,5 +1,6 @@
 package com.starter.payment.internal;
 
+import com.starter.common.exception.NotFoundException;
 import com.starter.payment.PaymentApi;
 import com.starter.payment.domain.OutboxEvent;
 import com.starter.payment.domain.Payment;
@@ -8,7 +9,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +73,7 @@ public class PaymentService implements PaymentApi {
         return toInfo(
                 paymentRepo
                         .findByIdOptional(id)
-                        .orElseThrow(() -> new NoSuchElementException("Payment not found")));
+                        .orElseThrow(() -> new NotFoundException("Payment not found")));
     }
 
     // ── Outbox transactional steps (called by the processors) ──────────
