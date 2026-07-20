@@ -106,7 +106,8 @@ Trivy + Renovate, **your secrets** by gitleaks. Nothing overlaps.
 **Observability** (staging/production; off in dev/test): JSON logs with a `requestId` + OpenTelemetry
 `traceId`/`spanId` for correlation, metrics at `/q/metrics`, health at `/q/health`, and error
 monitoring via Sentry/GlitchTip when `SENTRY_DSN` is set. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your
-collector. You just log via SLF4J — enrichment is automatic.
+collector. You just log via SLF4J — enrichment is automatic. To **see it all locally** (Grafana +
+Loki + Tempo + Prometheus + GlitchTip), run the stack in [local-infra/](local-infra/INFRA.md).
 
 **Your whole day-to-day is three things:**
 
