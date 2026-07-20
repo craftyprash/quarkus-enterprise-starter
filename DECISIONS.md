@@ -133,6 +133,16 @@ Docker image + `config/deploy.*.yml` + GitHub workflows, behind APISix. **Why:**
 existing Kamal-based rollout. DNS/TLS/registry/secrets are owned by DevOps — the committed configs use
 placeholders.
 
+### Observability: structured logs + tracing + error monitoring
+Staging/production emit JSON logs (`quarkus-logging-json`) enriched with a `requestId`
+(`RequestIdFilter`, honouring a gateway `X-Request-Id`) and OpenTelemetry `traceId`/`spanId`;
+`quarkus-logging-sentry` ships errors to a self-hosted GlitchTip when `SENTRY_DSN` is set. **Why:**
+plain unstructured logs with no correlation id are unusable once a request crosses the gateway and the
+async outbox — you can't follow one payment end-to-end, and exceptions vanish into log volume.
+**Trade-off:** three extra extensions; all are **off by default** (dev/test get plain logs, no tracing,
+no Sentry) and switch on only in the deploy profiles via env — so the starter still runs with zero
+observability infra. Metrics (Micrometer/Prometheus) and health checks were already present.
+
 ### Quality & security gates: free tools, wired into the build/CI
 `mvn verify` runs **SpotBugs + Find-Security-Bugs** (bytecode bug/security analysis) and a **JaCoCo**
 coverage gate (≥85% line); CI adds **Trivy** (dependency CVEs, secrets, Dockerfile misconfig, base

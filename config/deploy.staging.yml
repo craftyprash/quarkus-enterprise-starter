@@ -24,6 +24,7 @@ env:
   clear:
     QUARKUS_PROFILE: staging
     QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://staging-db:5432/starter
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
 
 builder:
   arch: amd64

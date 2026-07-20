@@ -297,6 +297,8 @@ log.info("Applicant created id={}", applicant.id);
 - Never string-concatenate log messages. Mask any identifier that must appear (`XXXXXX1234`).
 - No `System.out.println`. Do not add PII columns without being asked — assume every DB write is retained.
 
+**Observability is wired — just log via SLF4J and it's enriched automatically.** Staging/production emit **JSON logs** (`quarkus-logging-json`) carrying the MDC, which includes a **`requestId`** (`RequestIdFilter`, from `X-Request-Id` or generated) and OpenTelemetry **`traceId`/`spanId`** — so one request is correlatable across log lines and traces. **Error monitoring** goes to Sentry/GlitchTip (`quarkus-logging-sentry`) when `SENTRY_DSN` is set. Don't reinvent correlation ids or hand-roll error reporting; don't put PII into MDC (it lands in every log line).
+
 ---
 
 ## 11. Configuration and secrets

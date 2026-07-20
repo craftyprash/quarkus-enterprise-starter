@@ -18,3 +18,5 @@ env:
   secret:
     - QUARKUS_DATASOURCE_USERNAME
     - QUARKUS_DATASOURCE_PASSWORD
+  # To enable error monitoring, add SENTRY_DSN here (and to .kamal/secrets.<dest>); it stays
+  # disabled while unset. OTEL_EXPORTER_OTLP_ENDPOINT is set (non-secret) per environment.
