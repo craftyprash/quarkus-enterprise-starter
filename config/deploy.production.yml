@@ -9,7 +9,7 @@ servers:
 proxy:
   ssl: false
   hosts:
-    - api.example.com
+    - <%= ENV.fetch("KAMAL_PROXY_HOST_PRODUCTION", "api.example.com") %>
   path_prefix: /starter
   app_port: 8080
   response_timeout: 120

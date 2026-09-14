@@ -11,7 +11,7 @@ servers:
 proxy:
   ssl: false
   hosts:
-    - api.staging.example.com
+    - <%= ENV.fetch("KAMAL_PROXY_HOST_STAGING", "api.staging.example.com") %>
   path_prefix: <%= ENV.fetch("KAMAL_PATH_PREFIX", "/starter") %>
   app_port: 8080
   response_timeout: 60
